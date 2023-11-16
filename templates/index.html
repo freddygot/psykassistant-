@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #chat-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #chat-messages {
+            border: 1px solid #ddd;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+        #user-input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        #send-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-messages"></div>
+        <input type="text" id="user-input" placeholder="Skriv din melding her">
+        <button id="send-button">Send</button>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById("chat-messages");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+        let threadId = null;
+
+        // Function to initialize the conversation and get the thread ID
+        function initializeConversation() {
+            fetch("/start")
+            .then(response => response.json())
+            .then(data => {
+                threadId = data.thread_id;
+            });
+        }
+
+        // Call the function when the window loads
+        window.onload = initializeConversation;
+
+        // Function to display messages in the chat
+        function displayMessage(message, role) {
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add(role);
+            messageDiv.innerText = message;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll to the bottom
+        }
+
+        // Event listener for the Send button
+        sendButton.addEventListener("click", () => {
+            const userMessage = userInput.value;
+            displayMessage("Du: " + userMessage, "user");
+            userInput.value = "";
+
+            // Check if threadId is not null
+            if (!threadId) {
+                console.error("Ingen aktiv samtaletråd.");
+                return;
+            }
+
+            // Send user's message to the server and receive a response
+            fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    thread_id: threadId,
+                    message: userMessage,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const assistantResponse = data.response;
+                displayMessage("Assistent: " + assistantResponse, "assistant");
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        });
+    </script>
+</body>
+</html>
